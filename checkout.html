@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>OG Wear - Checkout</title>
 <style>
   body {
@@ -12,54 +12,273 @@
     color: white;
     overflow-x: hidden;
   }
+
+  /* Flower animation container */
+  .flowers {
+    pointer-events: none;
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+    z-index: 0;
+  }
+  .flower { position:absolute; width:64px; height:64px; will-change:transform,opacity; opacity:0.9; }
+  @keyframes floatAcross {
+    0% { transform: translate3d(-140px, 5vh, 0) rotate(0deg) scale(0.7); opacity:0.95;}
+    50% { transform: translate3d(50vw, 55vh, 0) rotate(180deg) scale(1.0); opacity:0.6;}
+    100% { transform: translate3d(120vw, 5vh, 0) rotate(360deg) scale(0.7); opacity:0;}
+  }
+  @keyframes floatAcrossReverse {
+    0% { transform: translate3d(120vw, 5vh, 0) rotate(360deg) scale(0.7); opacity:0.95;}
+    50% { transform: translate3d(40vw, 10vh, 0) rotate(180deg) scale(1.0); opacity:0.6;}
+    100% { transform: translate3d(-140px, 5vh, 0) rotate(0deg) scale(0.7); opacity:0;}
+  }
+
   header, footer {
     background: #111;
     padding: 15px 30px;
     text-align: center;
     color: white;
     border-bottom: 2px solid red;
+    position: relative;
+    z-index: 1;
   }
   header h1 { color: red; margin: 0; }
-  form {
-    margin: 50px auto;
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-    width: 300px;
+  .checkout {
+    margin: 30px auto;
+    max-width: 720px;
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 20px;
+    position: relative;
+    z-index: 1;
+    padding: 20px;
   }
-  input {
-    padding: 10px;
-    border-radius: 5px;
-    border: 1px solid red;
+  .panel {
     background: #111;
-    color: white;
+    border: 2px solid red;
+    padding: 16px;
+    border-radius: 10px;
   }
+  label { display:block; margin-top:10px; }
+  input, select { width:100%; padding:8px; margin-top:6px; border-radius:6px; border:1px solid red; background:#111; color:white; }
+  .addon { display:flex; align-items:center; gap:10px; margin-top:8px; }
+  .price-row { display:flex; justify-content:space-between; padding:6px 0; border-top:1px dashed rgba(255,0,0,0.08); margin-top:8px; }
+  .total { font-weight:bold; font-size:18px; color: #ffdddd; margin-top:8px; }
   button {
-    padding: 10px;
-    border: none;
-    border-radius: 5px;
-    background: red;
-    color: white;
-    font-weight: bold;
-    cursor: pointer;
+    margin-top: 15px; width:100%; padding:10px; background:red; border:none; border-radius:6px; color:white; font-weight:bold; cursor:pointer;
   }
   button:hover { background: darkred; }
+  .note { font-size:13px; color:#ddd; margin-top:6px; }
+  @media (max-width:880px){
+    .checkout{ grid-template-columns: 1fr; padding: 10px; }
+  }
 </style>
 </head>
 <body>
-  <header>
-    <h1>OG Wear - Checkout</h1>
-  </header>
+  <div class="flowers" id="flowersContainer" aria-hidden="true"></div>
 
-  <form action="thankyou.html" method="get">
-    <input type="text" name="name" placeholder="Your Name" required>
-    <input type="email" name="email" placeholder="Your Email" required>
-    <input type="text" name="address" placeholder="Shipping Address" required>
-    <button type="submit">Purchase</button>
-  </form>
+  <header><h1>OG Wear - Checkout</h1></header>
 
-  <footer>
-    <p>OG Wear &copy; 2025 | Contact: info@ogwear.com</p>
-  </footer>
+  <div class="checkout">
+    <!-- Left: form -->
+    <div class="panel">
+      <h2 style="color:red; margin:0 0 8px 0;">Shipping Details</h2>
+      <form id="checkoutForm" onsubmit="placeOrder(event)">
+        <label>Name:</label>
+        <input type="text" id="name" required>
+
+        <label>Email:</label>
+        <input type="email" id="email" required>
+
+        <label>Address:</label>
+        <input type="text" id="address" required>
+
+        <label>Phone:</label>
+        <input type="tel" id="phone" required>
+
+        <div style="margin-top:12px;">
+          <h3 style="margin:0 0 6px 0; color:red;">Payment</h3>
+          <select id="paymentMethod" required>
+            <option value="">Select Payment Method</option>
+            <option value="card">Credit / Debit Card</option>
+            <option value="upi">UPI</option>
+            <option value="paypal">PayPal</option>
+          </select>
+        </div>
+
+        <div style="margin-top:12px;">
+          <h3 style="margin:0 0 6px 0; color:red;">Add-ons</h3>
+          <div class="addon">
+            <input type="checkbox" id="giftWrap" onchange="updateTotals()">
+            <label for="giftWrap">Gift Wrap (₹50)</label>
+          </div>
+          <div class="addon">
+            <input type="checkbox" id="priority" onchange="updateTotals()">
+            <label for="priority">Priority Shipping (₹100)</label>
+          </div>
+
+          <div style="margin-top:8px;">
+            <label>Coupon Code</label>
+            <input id="coupon" placeholder="Enter coupon (e.g., SAVE50)"/>
+            <button type="button" onclick="applyCoupon()">Apply Coupon</button>
+            <div id="couponMsg" class="note"></div>
+          </div>
+        </div>
+
+        <button type="submit">Place Order & Pay</button>
+      </form>
+    </div>
+
+    <!-- Right: cart summary -->
+    <div class="panel" id="summaryPanel">
+      <h2 style="color:red; margin:0 0 8px 0;">Cart Summary</h2>
+      <div id="cartContent" class="note">Loading...</div>
+
+      <div class="price-row"><div>Subtotal</div><div id="subtotal">₹0</div></div>
+      <div class="price-row"><div>Taxes</div><div id="taxes">₹0</div></div>
+      <div class="price-row"><div>Shipping</div><div id="shipping">₹0</div></div>
+      <div class="price-row"><div>Discount</div><div id="discount">-₹0</div></div>
+
+      <div class="total">Total: <span id="totalAmount">₹0</span></div>
+
+      <div style="margin-top:10px;">
+        <button onclick="continueShopping()">Continue Shopping</button>
+      </div>
+    </div>
+  </div>
+
+  <footer><p>&copy; 2025 OG Wear &nbsp;|&nbsp; Contact: info@ogwear.com</p></footer>
+
+<script>
+/* Flower SVG same as index */
+const flowerSVG = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <g transform="translate(50,50)">
+    <path d="M0,-24 C8,-22 18,-14 20,-4 C10,-2 6,6 2,14 C-2,6 -10,-2 -20,-4 C-18,-14 -8,-22 0,-24" fill="#d32f2f"/>
+    <path d="M0,24 C-8,22 -18,14 -20,4 C-10,2 -6,-6 -2,-14 C2,-6 10,2 20,4 C18,14 8,22 0,24" fill="#b71c1c" opacity="0.95"/>
+    <circle cx="0" cy="0" r="6" fill="#ffebee"/>
+  </g>
+</svg>`;
+
+/* create many flowers */
+function spawnFlowers(count=10){
+  const container = document.getElementById('flowersContainer');
+  for(let i=0;i<count;i++){
+    const el = document.createElement('div');
+    el.className='flower';
+    el.innerHTML = flowerSVG;
+    const startTop = Math.random() * 70;
+    el.style.top = (10 + startTop) + 'vh';
+    el.style.left = (-80 - Math.random()*300) + 'px';
+    const scale = 0.5 + Math.random()*1;
+    el.style.width = (48 * scale) + 'px';
+    el.style.height = (48 * scale) + 'px';
+    const dur = 20 + Math.random()*18;
+    const delay = Math.random()*6;
+    el.style.animation = (Math.random()>0.5)? `floatAcross ${dur}s linear ${delay}s infinite` : `floatAcrossReverse ${dur+4}s linear ${delay}s infinite`;
+    container.appendChild(el);
+  }
+}
+spawnFlowers(14);
+
+/* Checkout logic: read selected product from localStorage (if set) */
+const cartContent = document.getElementById('cartContent');
+let product = null;
+let subtotal = 0;
+let taxes = 0;
+let shipping = 0;
+let discount = 0;
+let couponApplied = false;
+
+function loadProduct() {
+  try {
+    const raw = localStorage.getItem('selectedProduct');
+    if(raw) {
+      product = JSON.parse(raw);
+      cartContent.innerHTML = `<strong>${product.name}</strong><div style="margin-top:6px;">Price: ₹${product.price}</div>`;
+      subtotal = Number(product.price) || 0;
+    } else {
+      cartContent.innerHTML = `<div class="note">No product selected. You can still enter details or <a href="index.html" style="color:#ffdddd">go back to shop</a>.</div>`;
+      subtotal = 0;
+    }
+    computeTotals();
+  } catch(e){
+    cartContent.innerHTML = 'Error reading cart';
+  }
+}
+function computeTotals(){
+  taxes = Math.round(subtotal * 0.05); // 5% tax example
+  shipping = document.getElementById('priority').checked ? 100 : 0; // priority shipping cost only if selected
+  const gift = document.getElementById('giftWrap').checked ? 50 : 0;
+  let total = subtotal + taxes + shipping + gift - discount;
+  if (total < 0) total = 0;
+  document.getElementById('subtotal').textContent = '₹' + subtotal;
+  document.getElementById('taxes').textContent = '₹' + taxes;
+  document.getElementById('shipping').textContent = '₹' + shipping;
+  document.getElementById('discount').textContent = '-₹' + discount;
+  document.getElementById('totalAmount').textContent = '₹' + total;
+}
+
+/* called on addon changes */
+function updateTotals(){
+  // recompute based on current UI
+  computeTotals();
+}
+
+/* coupon apply (simple demo) */
+function applyCoupon(){
+  const code = document.getElementById('coupon').value.trim().toUpperCase();
+  const msg = document.getElementById('couponMsg');
+  if(!code){ msg.textContent = "Enter a coupon code."; msg.style.color='#ffdddd'; return; }
+  if(couponApplied){ msg.textContent = "Coupon already applied."; msg.style.color='#ffebee'; return; }
+  if(code === 'SAVE50' && subtotal >= 500){
+    discount = 50;
+    couponApplied = true;
+    msg.textContent = "Coupon applied: ₹50 off";
+    msg.style.color = '#b2ffb2';
+  } else if(code === 'HALFOFF' && subtotal >= 1000) {
+    discount = Math.round(subtotal * 0.5);
+    couponApplied = true;
+    msg.textContent = "Coupon applied: 50% off";
+    msg.style.color = '#b2ffb2';
+  } else {
+    msg.textContent = "Invalid or inapplicable coupon.";
+    msg.style.color = '#ffb3b3';
+  }
+  computeTotals();
+}
+
+function continueShopping(){ window.location.href = 'index.html'; }
+
+/* place order: store some small summary and redirect to thankyou */
+function placeOrder(e){
+  e.preventDefault();
+  const name = document.getElementById('name').value.trim();
+  const email = document.getElementById('email').value.trim();
+  const address = document.getElementById('address').value.trim();
+  const phone = document.getElementById('phone').value.trim();
+  if(!name || !email || !address || !phone){ alert('Please fill all details'); return; }
+
+  // compute final total again
+  computeTotals();
+  const finalTotalText = document.getElementById('totalAmount').textContent || '₹0';
+  // store a tiny summary to show on thankyou
+  const orderSummary = {
+    product: product || {name:'(none)', price:0},
+    addons: {
+      giftWrap: document.getElementById('giftWrap').checked,
+      priority: document.getElementById('priority').checked,
+      coupon: couponApplied ? document.getElementById('coupon').value.trim().toUpperCase() : null
+    },
+    total: finalTotalText,
+    name, email, address, phone
+  };
+  localStorage.setItem('lastOrder', JSON.stringify(orderSummary));
+  // simple redirect to thank you
+  window.location.href = 'thankyou.html';
+}
+
+/* init */
+loadProduct();
+</script>
 </body>
 </html>
