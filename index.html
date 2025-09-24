@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>OG Wear - Hoodies</title>
 <style>
   /* Body & Fonts */
@@ -14,21 +14,42 @@
     overflow-x: hidden;
   }
 
-  /* Animated dragon */
-  .dragon {
+  /* Flower animation container sits behind content */
+  .flowers {
+    pointer-events: none;
     position: fixed;
-    top: 0;
-    left: -500px;
-    width: 500px;
-    opacity: 0.2;
-    animation: moveDragon 25s linear infinite;
+    inset: 0;
+    overflow: hidden;
     z-index: 0;
   }
-  @keyframes moveDragon {
-    0% { left: -500px; top: 0; transform: rotate(0deg);}
-    50% { left: 100vw; top: 50vh; transform: rotate(180deg);}
-    100% { left: -500px; top: 0; transform: rotate(360deg);}
+
+  /* single flower wrapper */
+  .flower {
+    position: absolute;
+    width: 72px;
+    height: 72px;
+    will-change: transform, opacity;
+    opacity: 0.9;
+    transform-origin: center;
+    filter: drop-shadow(0 6px 10px rgba(0,0,0,0.6));
   }
+
+  /* gentle float + drift */
+  @keyframes floatAcross {
+    0% { transform: translate3d(-120px, 10vh, 0) rotate(0deg) scale(0.7); opacity: 0.9; }
+    50% { transform: translate3d(50vw, 45vh, 0) rotate(180deg) scale(0.9); opacity: 0.6; }
+    100% { transform: translate3d(120vw, 10vh, 0) rotate(360deg) scale(0.7); opacity: 0; }
+  }
+
+  /* alternate slower direction */
+  @keyframes floatAcrossReverse {
+    0% { transform: translate3d(120vw, 30vh, 0) rotate(360deg) scale(0.7); opacity: 0.9; }
+    50% { transform: translate3d(40vw, 10vh, 0) rotate(180deg) scale(1.0); opacity: 0.6; }
+    100% { transform: translate3d(-120px, 30vh, 0) rotate(0deg) scale(0.7); opacity: 0; }
+  }
+
+  /* flower SVG fills */
+  .flower svg { width: 100%; height: 100%; display:block; }
 
   /* Header */
   header {
@@ -97,11 +118,23 @@
     position: relative;
     z-index: 1;
   }
+
+  /* small product badge (add-on UI hint) */
+  .badge {
+    display: inline-block;
+    background: rgba(255,0,0,0.12);
+    color: #ffdddd;
+    border: 1px solid rgba(255,0,0,0.25);
+    padding: 3px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    margin-left: 8px;
+  }
 </style>
 </head>
 <body>
-  <!-- Animated Dragon -->
-  <img src="https://i.ibb.co/tq5R7Hk/red-dragon.png" class="dragon" alt="Dragon">
+  <!-- Flower animation container -->
+  <div class="flowers" id="flowersContainer" aria-hidden="true"></div>
 
   <!-- Header -->
   <header>
@@ -116,21 +149,21 @@
   <div class="products">
     <div class="product">
       <img src="https://via.placeholder.com/200x200/ff0000/ffffff?text=Red+Hoodie" alt="Red Hoodie">
-      <h3>Red Hoodie</h3>
+      <h3>Red Hoodie <span class="badge">Best</span></h3>
       <p>₹999</p>
-      <a href="checkout.html"><button>Add to Cart</button></a>
+      <a href="checkout.html"><button onclick="select('Red Hoodie',999)">Add to Cart</button></a>
     </div>
     <div class="product">
       <img src="https://via.placeholder.com/200x200/0000ff/ffffff?text=Blue+Hoodie" alt="Blue Hoodie">
       <h3>Blue Hoodie</h3>
       <p>₹1099</p>
-      <a href="checkout.html"><button>Add to Cart</button></a>
+      <a href="checkout.html"><button onclick="select('Blue Hoodie',1099)">Add to Cart</button></a>
     </div>
     <div class="product">
       <img src="https://via.placeholder.com/200x200/ffff00/000000?text=Yellow+Hoodie" alt="Yellow Hoodie">
       <h3>Yellow Hoodie</h3>
       <p>₹899</p>
-      <a href="checkout.html"><button>Add to Cart</button></a>
+      <a href="checkout.html"><button onclick="select('Yellow Hoodie',899)">Add to Cart</button></a>
     </div>
   </div>
 
@@ -138,5 +171,55 @@
   <footer>
     <p>OG Wear &copy; 2025 | Contact: info@ogwear.com | Follow us on Instagram & Twitter</p>
   </footer>
+
+<script>
+/* ========== Flower SVG (Japan-themed stylized sakura in red) ========== */
+const flowerSVG = `
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <!-- stylized 5-petal flower, filled red -->
+  <g transform="translate(50,50)">
+    <path d="M0,-24 C8,-22 18,-14 20,-4 C10,-2 6,6 2,14 C-2,6 -10,-2 -20,-4 C-18,-14 -8,-22 0,-24" fill="#d32f2f"/>
+    <path d="M0,24 C-8,22 -18,14 -20,4 C-10,2 -6,-6 -2,-14 C2,-6 10,2 20,4 C18,14 8,22 0,24" fill="#b71c1c" opacity="0.95"/>
+    <circle cx="0" cy="0" r="6" fill="#ffebee"/>
+  </g>
+</svg>`;
+
+/* spawn moving flowers randomly across screen */
+function spawnFlowers(count = 10) {
+  const container = document.getElementById('flowersContainer');
+  for (let i = 0; i < count; i++) {
+    const el = document.createElement('div');
+    el.className = 'flower';
+    el.innerHTML = flowerSVG;
+    // randomize start top position (0% - 70%)
+    const startTop = Math.random() * 70;
+    el.style.top = startTop + 'vh';
+    // random left offset to start off-screen a bit
+    el.style.left = (-80 - Math.random()*200) + 'px';
+    // random size
+    const scale = 0.5 + Math.random() * 1.0;
+    el.style.width = (50 * scale) + 'px';
+    el.style.height = (50 * scale) + 'px';
+    // choose animation duration & delay
+    const dur = 18 + Math.random() * 18; // 18s - 36s
+    const delay = Math.random() * 6;
+    // alternate direction sometimes
+    if (Math.random() > 0.5) {
+      el.style.animation = `floatAcross ${dur}s linear ${delay}s infinite`;
+    } else {
+      el.style.animation = `floatAcrossReverse ${dur + 6}s linear ${delay}s infinite`;
+    }
+    container.appendChild(el);
+  }
+}
+
+/* store small selected product to localStorage for checkout page */
+function select(name, price){
+  localStorage.setItem('selectedProduct', JSON.stringify({name, price}));
+}
+
+/* spawn a pleasant number of flowers */
+spawnFlowers(12);
+</script>
 </body>
 </html>
